@@ -1,0 +1,54 @@
+:root {
+  /* Color: calm rehab palette. Sage for "active/good", warm amber for "resting",
+     soft warm-white background — clinical without being sterile. */
+  --bg: #faf8f5;
+  --surface: #ffffff;
+  --ink: #1f231f;
+  --ink-muted: #5b6358;
+  --ink-faint: #8b9286;
+  --border: #e3e1da;
+
+  --accent: #3f6b52;       /* deep sage — primary actions, "active" */
+  --accent-ink: #fdfbf8;
+  --hold-color: #3f6b52;   /* hold countdown: same calm sage, it's automatic and steady */
+  --rest-color: #b9762f;   /* rest countdown: warm amber, distinct "pause" signal */
+
+  --font-display: 'Georgia', 'Iowan Old Style', serif;
+  --font-sans: -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+
+  font: 16px/1.5 var(--font-sans);
+  color: var(--ink);
+  background: var(--bg);
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+}
