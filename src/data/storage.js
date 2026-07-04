@@ -1,9 +1,98 @@
-// storage.js — localStorage read/write for session log entries,
-// plus streak and adherence computations.
-// This is the minimal persistence needed for Phase 2 (summary screen).
-// Phase 3 will expand this to also store exercises and visits.
+// storage.js — localStorage read/write for all PT Track data.
+// Exercises, Visits, and Sessions (log entries).
 
-const SESSIONS_KEY = "pt_track_sessions";
+const EXERCISES_KEY  = "pt_track_exercises";
+const VISITS_KEY     = "pt_track_visits";
+const SESSIONS_KEY   = "pt_track_sessions";
+
+// ─── Exercises ────────────────────────────────────────────────────────────────
+// { id, name, formCue, type:"reps"|"hold", reps, holdSeconds, sets,
+//   restSeconds, frequency:"daily"|"alternate", status:"active"|"retired",
+//   visitId, createdAt }
+
+export function loadExercises() {
+  try {
+    const raw = localStorage.getItem(EXERCISES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveExercises(exercises) {
+  try { localStorage.setItem(EXERCISES_KEY, JSON.stringify(exercises)); }
+  catch { /* silent */ }
+}
+
+export function loadActiveExercises() {
+  return loadExercises().filter((e) => e.status === "active");
+}
+
+export function addExercise(fields) {
+  const exercises = loadExercises();
+  const exercise = {
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    status: "active",
+    restSeconds: 20,
+    ...fields,
+  };
+  exercises.push(exercise);
+  saveExercises(exercises);
+  return exercise;
+}
+
+export function updateExercise(id, fields) {
+  const exercises = loadExercises();
+  const idx = exercises.findIndex((e) => e.id === id);
+  if (idx === -1) return null;
+  exercises[idx] = { ...exercises[idx], ...fields };
+  saveExercises(exercises);
+  return exercises[idx];
+}
+
+export function retireExercise(id) {
+  return updateExercise(id, { status: "retired" });
+}
+
+// ─── Visits ───────────────────────────────────────────────────────────────────
+// { id, date:"YYYY-MM-DD", notes, changes:[{type, exerciseId, exerciseName}],
+//   createdAt }
+
+export function loadVisits() {
+  try {
+    const raw = localStorage.getItem(VISITS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+export function saveVisit(fields) {
+  const visits = loadVisits();
+  const visit = {
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    changes: [],
+    ...fields,
+  };
+  visits.push(visit);
+  try { localStorage.setItem(VISITS_KEY, JSON.stringify(visits)); }
+  catch { /* silent */ }
+  return visit;
+}
+
+// ─── Schedule ─────────────────────────────────────────────────────────────────
+// Returns active exercises due today.
+// "daily"     → every day
+// "alternate" → every other day based on days since exercise was created
+
+export function getTodaysExercises() {
+  const active = loadActiveExercises();
+  const todayMs = new Date().setHours(0, 0, 0, 0);
+  return active.filter((ex) => {
+    if (ex.frequency === "daily") return true;
+    const createdMs = new Date(ex.createdAt).setHours(0, 0, 0, 0);
+    const daysDiff = Math.floor((todayMs - createdMs) / 86400000);
+    return daysDiff % 2 === 0;
+  });
+}
 
 // A session record stored in localStorage:
 // {
