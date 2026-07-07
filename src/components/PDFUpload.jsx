@@ -1,17 +1,35 @@
 import { useState } from "react";
-import { findExercise, mergeWithPrescription, EXERCISE_DATABASE } from "../data/exerciseDatabase";
+import * as pdfjsLib from "pdfjs-dist";
+import { findExercise, mergeWithPrescription } from "../data/exerciseDatabase";
 import { addExercise, saveVisit } from "../data/storage";
 import "./PDFUpload.css";
 
+// Point pdf.js worker at the CDN version matching the installed package
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+// ─── PDF text extraction ───────────────────────────────────────────────────────
+
+async function extractTextFromPDF(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let fullText = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items.map((item) => item.str).join(" ");
+    fullText += pageText + "\n";
+  }
+  return fullText;
+}
+
 // ─── Claude parsing ────────────────────────────────────────────────────────────
 
-async function parsePDFWithClaude(base64PDF) {
-  // Call our Vercel serverless proxy instead of Anthropic directly.
-  // This avoids browser CORS/HTTP2 issues and keeps the API key server-side.
+async function parsePDFWithClaude(pdfText) {
+  // Send extracted text (not raw binary) to stay within Vercel's 4.5MB body limit
   const response = await fetch("/api/parse-pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pdfBase64: base64PDF }),
+    body: JSON.stringify({ pdfText }),
   });
 
   if (!response.ok) {
@@ -179,15 +197,9 @@ export default function PDFUpload({ onDone }) {
     setStage("parsing");
 
     try {
-      // Convert PDF to base64
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]);
-        reader.onerror = () => reject(new Error("Failed to read file."));
-        reader.readAsDataURL(file);
-      });
-
-      const parsed = await parsePDFWithClaude(base64);
+      // Extract text from PDF client-side (avoids 4.5MB Vercel body limit)
+      const pdfText = await extractTextFromPDF(file);
+      const parsed = await parsePDFWithClaude(pdfText);
       const matched = matchExercises(parsed);
       setExercises(matched);
       setStage("review");

@@ -1,13 +1,12 @@
-// Vercel serverless function — proxies PDF parsing to Anthropic API.
-// Runs server-side so the API key never touches the browser,
-// and avoids the HTTP/2 protocol error from direct browser calls.
+// Vercel serverless function — proxies PT program text to Anthropic API.
+// Receives extracted PDF text (not raw binary) to stay within Vercel's 4.5MB limit.
 
-const SYSTEM_PROMPT = `You are parsing a physical therapy Home Exercise Program PDF.
+const SYSTEM_PROMPT = `You are parsing a physical therapy Home Exercise Program.
 Extract every exercise and return ONLY a JSON array — no markdown, no explanation, no backticks.
 
 Each item in the array must have exactly these fields:
 {
-  "name": "exercise name as written in the PDF",
+  "name": "exercise name as written in the document",
   "sets": number or null,
   "reps": number or null,
   "holdSeconds": number or null (convert "30 sec." → 30, null if N/A),
@@ -17,34 +16,31 @@ Each item in the array must have exactly these fields:
 
 Rules:
 - If both reps and holdSeconds are present, include both (it's a reps-with-hold exercise).
-- If Sets is N/A in the PDF but Reps has a value, treat Reps as the set count and sets as 1.
+- If Sets is N/A but Reps has a value, treat Reps as the set count and sets as 1.
 - Return null for any field that is genuinely N/A or missing.
 - Return ONLY the JSON array. No other text.`;
 
-// Tell Vercel to allow larger request bodies (PDFs can be several MB as base64)
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "10mb",
+      sizeLimit: "2mb",
     },
   },
 };
 
 export default async function handler(req, res) {
-  // Only allow POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Vercel parses JSON body automatically when Content-Type is application/json
-  const pdfBase64 = req.body?.pdfBase64;
-  if (!pdfBase64) {
-    return res.status(400).json({ error: "Missing pdfBase64 in request body" });
+  const pdfText = req.body?.pdfText;
+  if (!pdfText) {
+    return res.status(400).json({ error: "Missing pdfText in request body" });
   }
 
   const apiKey = process.env.VITE_ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: "Anthropic API key not configured on server" });
+    return res.status(500).json({ error: "Anthropic API key not configured" });
   }
 
   try {
@@ -62,20 +58,7 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "user",
-            content: [
-              {
-                type: "document",
-                source: {
-                  type: "base64",
-                  media_type: "application/pdf",
-                  data: pdfBase64,
-                },
-              },
-              {
-                type: "text",
-                text: "Extract all exercises from this PT home exercise program PDF.",
-              },
-            ],
+            content: `Here is the text extracted from a PT home exercise program PDF:\n\n${pdfText}\n\nExtract all exercises as a JSON array.`,
           },
         ],
       }),
