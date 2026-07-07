@@ -32,6 +32,12 @@
   color: var(--ink);
 }
 
+.today-header-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .today-plan-btn {
   font-size: 13px;
   padding: 8px 14px;
@@ -40,7 +46,6 @@
   background: var(--surface);
   color: var(--ink-muted);
   cursor: pointer;
-  margin-top: 6px;
 }
 
 /* Stats */
@@ -177,7 +182,13 @@
   max-width: 260px;
 }
 
-/* Footer with Start session button */
+.today-import-btn {
+  width: auto;
+  padding: 14px 28px;
+  position: static;
+  transform: none;
+  max-width: 280px;
+}
 .today-footer {
   position: fixed;
   bottom: 0;

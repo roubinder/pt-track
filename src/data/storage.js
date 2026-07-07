@@ -214,3 +214,78 @@ export function sessionCompletionLevel(entries) {
   if (completed === total) return "full";
   return "partial";
 }
+
+// ─── Trends ───────────────────────────────────────────────────────────────────
+// Returns per-exercise stats across all sessions:
+// [{
+//   exerciseId, exerciseName,
+//   timesPresscribed, timesCompleted, completionRate (0-100),
+//   totalSetsCompleted, totalSetsPrescribed,
+// }]
+//
+// Note: blocker categories are not yet captured in the log entry shape
+// (Phase 3 logs sets but not blocker reason). This is a v2 addition.
+// Trends shows completion rate per exercise as the primary signal for now.
+
+export function computeExerciseTrends(sessions) {
+  // Flatten all entries across all sessions
+  const allEntries = sessions.flatMap((s) => s.entries);
+
+  // Group by exerciseId
+  const byExercise = {};
+  for (const entry of allEntries) {
+    if (!byExercise[entry.exerciseId]) {
+      byExercise[entry.exerciseId] = {
+        exerciseId: entry.exerciseId,
+        exerciseName: entry.exerciseName,
+        timesPrescribed: 0,
+        timesCompleted: 0,
+        totalSetsCompleted: 0,
+        totalSetsPrescribed: 0,
+      };
+    }
+    const agg = byExercise[entry.exerciseId];
+    agg.timesPrescribed += 1;
+    if (entry.setsCompleted > 0) agg.timesCompleted += 1;
+    agg.totalSetsCompleted += entry.setsCompleted;
+    agg.totalSetsPrescribed += entry.setsPrescribed;
+  }
+
+  return Object.values(byExercise)
+    .map((agg) => ({
+      ...agg,
+      completionRate:
+        agg.timesPrescribed > 0
+          ? Math.round((agg.timesCompleted / agg.timesPrescribed) * 100)
+          : 0,
+    }))
+    .sort((a, b) => a.exerciseName.localeCompare(b.exerciseName));
+}
+
+// Overall adherence across all time: distinct days with >=1 completed session
+// divided by distinct days with any session at all.
+export function computeOverallAdherence(sessions) {
+  if (!sessions.length) return 0;
+  const allDays = new Set(sessions.map((s) => s.date));
+  const completedDays = new Set(
+    sessions.filter(sessionCounts).map((s) => s.date)
+  );
+  return Math.round((completedDays.size / allDays.size) * 100);
+}
+
+// Last 4 weeks of daily activity for a simple calendar heatmap.
+// Returns array of { date:"YYYY-MM-DD", completed: bool } for each day.
+export function getLast28Days(sessions) {
+  const completedDates = new Set(
+    sessions.filter(sessionCounts).map((s) => s.date)
+  );
+  const days = [];
+  const today = new Date();
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    days.push({ date: dateStr, completed: completedDates.has(dateStr) });
+  }
+  return days;
+}

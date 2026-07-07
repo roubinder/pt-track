@@ -8,11 +8,13 @@ function formatFrequency(ex) {
 }
 
 export default function TodayScreen({
-  exercises,       // today's exercises from getTodaysExercises()
-  weekAdherence,   // number 0-100
-  streak,          // current streak
+  exercises,
+  weekAdherence,
+  streak,
   onStartSession,
   onUpdatePlan,
+  onViewTrends,
+  onImportPDF,
 }) {
   const hasExercises = exercises.length > 0;
 
@@ -23,9 +25,14 @@ export default function TodayScreen({
           <p className="today-eyebrow">PT Track</p>
           <h1 className="today-title">Today</h1>
         </div>
-        <button className="today-plan-btn" onClick={onUpdatePlan}>
-          Update plan
-        </button>
+        <div className="today-header-actions">
+          <button className="today-plan-btn" onClick={onViewTrends}>
+            Trends
+          </button>
+          <button className="today-plan-btn" onClick={onUpdatePlan}>
+            Update plan
+          </button>
+        </div>
       </div>
 
       {/* Stats bar */}
@@ -63,8 +70,14 @@ export default function TodayScreen({
         <div className="today-empty">
           <p className="today-empty-title">No exercises yet</p>
           <p className="today-empty-sub">
-            Add your PT exercises by tapping "Update plan" above.
+            Import your PT program PDF or add exercises manually.
           </p>
+          <button className="today-start-btn today-import-btn" onClick={onImportPDF}>
+            Import PT program
+          </button>
+          <button className="today-plan-btn" onClick={onUpdatePlan} style={{ marginTop: 8 }}>
+            Add manually
+          </button>
         </div>
       )}
 

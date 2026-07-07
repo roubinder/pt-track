@@ -1,0 +1,234 @@
+.trends-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.trends-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 18px 12px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 10;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.trends-back-btn {
+  font-size: 14px;
+  color: var(--ink-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.trends-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--ink);
+}
+
+.trends-section {
+  padding: 18px 18px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trends-section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.trends-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+/* Overall stats */
+.trends-stats-row {
+  display: flex;
+  gap: 10px;
+}
+
+.trends-stat-card {
+  flex: 1;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.trends-stat-value {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.trends-stat-label {
+  font-size: 11px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+/* Heatmap */
+.trends-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.trends-heatmap-labels {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 2px;
+}
+
+.trends-heatmap-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.trends-heatmap-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.trends-heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: var(--border);
+}
+
+.trends-heatmap-cell--done {
+  background: var(--accent);
+  opacity: 0.85;
+}
+
+.trends-heatmap-cell--sm {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.trends-heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+/* Per-exercise */
+.trends-exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 32px;
+}
+
+.trends-exercise-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trends-exercise-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.trends-exercise-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0;
+}
+
+.trends-exercise-rate {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.trends-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.trends-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.trends-exercise-detail {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+/* Empty state */
+.trends-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  gap: 8px;
+}
+
+.trends-empty-title {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0;
+}
+
+.trends-empty-sub {
+  font-size: 14px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 260px;
+}
