@@ -21,20 +21,30 @@ Rules:
 - Return null for any field that is genuinely N/A or missing.
 - Return ONLY the JSON array. No other text.`;
 
+// Tell Vercel to allow larger request bodies (PDFs can be several MB as base64)
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};
+
 export default async function handler(req, res) {
   // Only allow POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { pdfBase64 } = req.body;
+  // Vercel parses JSON body automatically when Content-Type is application/json
+  const pdfBase64 = req.body?.pdfBase64;
   if (!pdfBase64) {
     return res.status(400).json({ error: "Missing pdfBase64 in request body" });
   }
 
   const apiKey = process.env.VITE_ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: "Anthropic API key not configured" });
+    return res.status(500).json({ error: "Anthropic API key not configured on server" });
   }
 
   try {
@@ -79,14 +89,16 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    const text =
-      data.content.find((b) => b.type === "text")?.text || "[]";
+    const text = data.content.find((b) => b.type === "text")?.text || "[]";
 
     try {
       const exercises = JSON.parse(text.replace(/```json|```/g, "").trim());
       return res.status(200).json({ exercises });
     } catch {
-      return res.status(500).json({ error: "Could not parse Claude response as JSON" });
+      return res.status(500).json({
+        error: "Could not parse Claude response as JSON",
+        raw: text.slice(0, 200),
+      });
     }
   } catch (err) {
     return res.status(500).json({ error: err.message || "Request failed" });
