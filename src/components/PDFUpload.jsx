@@ -3,77 +3,24 @@ import { findExercise, mergeWithPrescription, EXERCISE_DATABASE } from "../data/
 import { addExercise, saveVisit } from "../data/storage";
 import "./PDFUpload.css";
 
-const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
-
 // ─── Claude parsing ────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are parsing a physical therapy Home Exercise Program PDF.
-Extract every exercise and return ONLY a JSON array — no markdown, no explanation, no backticks.
-
-Each item in the array must have exactly these fields:
-{
-  "name": "exercise name as written in the PDF",
-  "sets": number or null,
-  "reps": number or null,
-  "holdSeconds": number or null (convert "30 sec." → 30, null if N/A),
-  "frequency": "daily" or "alternate" (daily if 7x/week or daily, alternate if 3x/week or every other day),
-  "formCues": "the patient-specific exercise directions verbatim, condensed to 1-2 sentences max"
-}
-
-Rules:
-- If both reps and holdSeconds are present, include both (it's a reps-with-hold exercise).
-- If Sets is N/A in the PDF but Reps has a value, treat Reps as the set count and sets as 1.
-- Return null for any field that is genuinely N/A or missing.
-- Return ONLY the JSON array. No other text.`;
-
 async function parsePDFWithClaude(base64PDF) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  // Call our Vercel serverless proxy instead of Anthropic directly.
+  // This avoids browser CORS/HTTP2 issues and keeps the API key server-side.
+  const response = await fetch("/api/parse-pdf", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": API_KEY,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: base64PDF,
-              },
-            },
-            {
-              type: "text",
-              text: "Extract all exercises from this PT home exercise program PDF.",
-            },
-          ],
-        },
-      ],
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pdfBase64: base64PDF }),
   });
 
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(err?.error?.message || "Claude API error");
+    throw new Error(err?.error || "Failed to parse PDF");
   }
 
   const data = await response.json();
-  const text = data.content.find((b) => b.type === "text")?.text || "[]";
-
-  try {
-    return JSON.parse(text.replace(/```json|```/g, "").trim());
-  } catch {
-    throw new Error("Could not parse Claude's response as JSON.");
-  }
+  return data.exercises;
 }
 
 // ─── Exercise matching ─────────────────────────────────────────────────────────
