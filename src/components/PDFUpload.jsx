@@ -16,29 +16,84 @@ async function extractTextFromPDF(file) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const pageText = content.items.map((item) => item.str).join(" ");
+    // Join items, filter out single chars and noise from image regions
+    const pageText = content.items
+      .map((item) => item.str)
+      .filter((s) => s.trim().length > 1)
+      .join(" ");
     fullText += pageText + "\n";
   }
-  return fullText;
+
+  // Clean up: collapse whitespace, remove repeated spaces
+  const cleaned = fullText
+    .replace(/\s+/g, " ")
+    .replace(/(.{200})\1+/g, "$1") // remove large repeated blocks
+    .trim();
+
+  // Hard cap at 4000 chars — more than enough for any PT exercise list
+  return cleaned.slice(0, 4000);
 }
 
 // ─── Claude parsing ────────────────────────────────────────────────────────────
 
+const SYSTEM_PROMPT = `You are parsing a physical therapy Home Exercise Program.
+Extract every exercise and return ONLY a JSON array — no markdown, no explanation, no backticks.
+
+Each item in the array must have exactly these fields:
+{
+  "name": "exercise name as written in the document",
+  "sets": number or null,
+  "reps": number or null,
+  "holdSeconds": number or null (convert "30 sec." to a number, null if N/A),
+  "frequency": "daily" or "alternate",
+  "formCues": "patient-specific directions condensed to 1-2 sentences"
+}
+
+Rules:
+- If both reps and holdSeconds are present, include both.
+- If Sets is N/A but Reps has a value, use Reps as set count with sets as 1.
+- Return null for any field that is N/A or missing.
+- Return ONLY the JSON array. No other text.`;
+
 async function parsePDFWithClaude(pdfText) {
-  // Send extracted text (not raw binary) to stay within Vercel's 4.5MB body limit
-  const response = await fetch("/api/parse-pdf", {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+
+  console.log("Sending text length:", pdfText.length, "chars");
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pdfText }),
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: `Here is the text from a PT home exercise program PDF:\n\n${pdfText}\n\nExtract all exercises as a JSON array.`,
+        },
+      ],
+    }),
   });
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err?.error || "Failed to parse PDF");
+    const err = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(err?.error?.message || `API error ${response.status}`);
   }
 
   const data = await response.json();
-  return data.exercises;
+  const text = data.content.find((b) => b.type === "text")?.text || "[]";
+
+  try {
+    return JSON.parse(text.replace(/```json|```/g, "").trim());
+  } catch {
+    throw new Error("Could not parse response as JSON: " + text.slice(0, 100));
+  }
 }
 
 // ─── Exercise matching ─────────────────────────────────────────────────────────
